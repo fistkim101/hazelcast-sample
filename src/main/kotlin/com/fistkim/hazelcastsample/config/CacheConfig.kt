@@ -3,6 +3,8 @@ package com.fistkim.hazelcastsample.config
 import com.hazelcast.config.*
 import com.hazelcast.core.Hazelcast
 import com.hazelcast.core.HazelcastInstance
+import org.slf4j.Logger
+import org.slf4j.LoggerFactory
 import org.springframework.boot.context.properties.ConfigurationProperties
 import org.springframework.boot.context.properties.ConstructorBinding
 import org.springframework.boot.context.properties.EnableConfigurationProperties
@@ -16,6 +18,8 @@ import java.util.stream.Collectors
 class CacheConfig(
     val hazelcastCacheSetting: HazelcastCacheSetting
 ) {
+
+    val logger: Logger = LoggerFactory.getLogger(CacheConfig::class.java)
 
     @ConstructorBinding // component scan 대상이 된다
     @ConfigurationProperties("cache.hazelcast")
@@ -31,7 +35,7 @@ class CacheConfig(
             val maxSize: Int = 0,
             val maxSizePolicy: MaxSizePolicy = MaxSizePolicy.PER_NODE,
             val timeToLiveSeconds: Int = 0,
-//            val className: String,
+            val className: String,
 //            val statisticsEnabled: Boolean = false,
 //            val formatObject: Boolean = false,
 //            val indexSettings: List<MapIndexSettings> = emptyList()
@@ -91,7 +95,10 @@ class CacheConfig(
         }
 
         mapConfigurations
-            .forEach { configuration.addMapConfig(it) }
+            .forEach {
+                logger.info(">>> addMapConfig cache name : ${it!!.name}")
+                configuration.addMapConfig(it)
+            }
     }
 
     private fun getMapConfiguration(cacheName: String, cacheNames: Set<String>): MapConfig? {
@@ -115,7 +122,7 @@ class CacheConfig(
             .setTimeToLiveSeconds(targetMap.timeToLiveSeconds)
 
         // external storage 와 연동될때(https://docs.hazelcast.com/hazelcast/5.0/data-structures/working-with-external-data#creating-the-mapstore-implementation)
-        //.setMapStoreConfig(MapStoreConfig().setClassName("com.fistkim.hazelcastsample.config.SearchResult").setEnabled(true))
+        //.setMapStoreConfig(MapStoreConfig().setClassName(targetMap.className).setEnabled(true))
 
         return mapConfiguration
     }

@@ -1,9 +1,5 @@
-package com.fistkim.hazelcastsample.config
+package com.fistkim.hazelcastsample.model
 
-/**
- *
- * @author Leo
- */
 data class SearchResult(
     val id: Int,
     val content: String

@@ -11,5 +11,15 @@ cache:
         max-size: 5000
         max-size-policy: PER_NODE
         time-to-live-seconds: 300 # 5m
-#        class-name:
+        class-name: com.fistkim.hazelcastsample.model.SearchResult
+#        statistics-enabled:
+
+      person:
+        type-id: 1002
+        backup-count: 0
+        async-backup-count: 1
+        max-size: 5000
+        max-size-policy: PER_NODE
+        time-to-live-seconds: 300 # 5m
+        class-name: com.fistkim.hazelcastsample.model.Person
 #        statistics-enabled:
