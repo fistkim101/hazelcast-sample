@@ -1,0 +1,15 @@
+cache:
+  hazelcast:
+    instance-name: hazelcast-sample
+    management-enabled: true
+
+    map-settings:
+      search-results:
+        type-id: 1001
+        backup-count: 0
+        async-backup-count: 1
+        max-size: 5000
+        max-size-policy: PER_NODE
+        time-to-live-seconds: 300 # 5m
+#        class-name:
+#        statistics-enabled:
