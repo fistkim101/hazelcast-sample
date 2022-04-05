@@ -26,6 +26,9 @@ dependencies {
     // hazelcast
     implementation("com.hazelcast:hazelcast-all:4.2.4")
 
+    // cbor
+    implementation("com.fasterxml.jackson.dataformat:jackson-dataformat-cbor:2.13.2")
+
     testImplementation("org.springframework.boot:spring-boot-starter-test")
     testImplementation("io.projectreactor:reactor-test")
 }

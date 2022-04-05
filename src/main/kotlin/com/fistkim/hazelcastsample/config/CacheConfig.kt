@@ -1,8 +1,12 @@
 package com.fistkim.hazelcastsample.config
 
+import com.fasterxml.jackson.databind.DeserializationFeature
+import com.fasterxml.jackson.databind.ObjectMapper
+import com.fasterxml.jackson.dataformat.cbor.CBORFactory
 import com.hazelcast.config.*
 import com.hazelcast.core.Hazelcast
 import com.hazelcast.core.HazelcastInstance
+import com.hazelcast.nio.serialization.ByteArraySerializer
 import org.slf4j.Logger
 import org.slf4j.LoggerFactory
 import org.springframework.boot.context.properties.ConfigurationProperties
@@ -10,6 +14,8 @@ import org.springframework.boot.context.properties.ConstructorBinding
 import org.springframework.boot.context.properties.EnableConfigurationProperties
 import org.springframework.context.annotation.Bean
 import org.springframework.context.annotation.Configuration
+import org.springframework.util.ClassUtils
+import java.io.IOException
 import java.util.stream.Collectors
 
 
@@ -48,6 +54,13 @@ class CacheConfig(
     }
 
     @Bean
+    fun cborObjectMapper(): ObjectMapper {
+        val objectMapper = ObjectMapper(CBORFactory())
+        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
+        return objectMapper
+    }
+
+    @Bean
     fun hazelCastMember(): HazelcastInstance {
         val memberConfiguration = this.hazelCastConfig()
         return Hazelcast.newHazelcastInstance(memberConfiguration)
@@ -66,21 +79,34 @@ class CacheConfig(
         this.applyNetworkSetting(configuration)
         this.applyMapSetting(configuration)
         this.applyManagementSetting(configuration)
+        hazelcastCacheSetting.mapSettings.forEach { entry ->
+            this.customizeSerializer(entry, configuration)
+        }
 
         return configuration
     }
 
-    private fun applyNetworkSetting(configuration: Config) {
+    private fun customizeSerializer(
+        entry: Map.Entry<String, HazelcastCacheSetting.HazelcastMapSettings>,
+        configuration: Config
+    ) {
+        val clazz = ClassUtils.getDefaultClassLoader()!!.loadClass(entry.value.className)
+        val serializerConfig = SerializerConfig()
+            .setTypeClass(clazz)
+            .setImplementation(BinaryObjectSerializer(cborObjectMapper(), clazz, entry.value.typeId))
+        configuration.serializationConfig
+            .addSerializerConfig(serializerConfig)
+    }
 
+
+    private fun applyNetworkSetting(configuration: Config) {
         val joinConfiguration = configuration.networkConfig.join
         joinConfiguration.multicastConfig.isEnabled = false
         joinConfiguration.tcpIpConfig.isEnabled = true
         joinConfiguration.tcpIpConfig.members = listOf("primary")
-
     }
 
     private fun applyMapSetting(configuration: Config) {
-
         val cacheNames = hazelcastCacheSetting.mapSettings.keys
         if (cacheNames.isEmpty()) {
             return
@@ -128,11 +154,33 @@ class CacheConfig(
     }
 
     private fun applyManagementSetting(configuration: Config) {
-
         if (hazelcastCacheSetting.managementEnabled) {
             val managementConfiguration = configuration.managementCenterConfig
             managementConfiguration.isScriptingEnabled = true
             configuration.managementCenterConfig = managementConfiguration
+        }
+    }
+
+    private class BinaryObjectSerializer<T>(
+        private val objectMapper: ObjectMapper,
+        private val type: Class<T>,
+        private val typeId: Int
+    ) : ByteArraySerializer<T> {
+
+        override fun getTypeId(): Int {
+            return typeId
+        }
+
+        override fun destroy() {}
+
+        @Throws(IOException::class)
+        override fun write(obj: T): ByteArray {
+            return objectMapper.writeValueAsBytes(obj)
+        }
+
+        @Throws(IOException::class)
+        override fun read(buffer: ByteArray): T {
+            return objectMapper.readValue(buffer, type)
         }
 
     }
