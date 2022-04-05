@@ -4,7 +4,7 @@ cache:
     management-enabled: true
 
     map-settings:
-      search-results:
+      search-result:
         type-id: 1001
         backup-count: 0
         async-backup-count: 1

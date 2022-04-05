@@ -1,8 +1,7 @@
 package com.fistkim.hazelcastsample.config
 
-import com.fasterxml.jackson.databind.DeserializationFeature
 import com.fasterxml.jackson.databind.ObjectMapper
-import com.fasterxml.jackson.dataformat.cbor.CBORFactory
+import com.fistkim.hazelcastsample.support.ObjectMapperFactory
 import com.hazelcast.config.*
 import com.hazelcast.core.Hazelcast
 import com.hazelcast.core.HazelcastInstance
@@ -54,13 +53,6 @@ class CacheConfig(
     }
 
     @Bean
-    fun cborObjectMapper(): ObjectMapper {
-        val objectMapper = ObjectMapper(CBORFactory())
-        objectMapper.configure(DeserializationFeature.FAIL_ON_UNKNOWN_PROPERTIES, false)
-        return objectMapper
-    }
-
-    @Bean
     fun hazelCastMember(): HazelcastInstance {
         val memberConfiguration = this.hazelCastConfig()
         return Hazelcast.newHazelcastInstance(memberConfiguration)
@@ -91,9 +83,10 @@ class CacheConfig(
         configuration: Config
     ) {
         val clazz = ClassUtils.getDefaultClassLoader()!!.loadClass(entry.value.className)
+        logger.info(">>> clazz : $clazz")
         val serializerConfig = SerializerConfig()
             .setTypeClass(clazz)
-            .setImplementation(BinaryObjectSerializer(cborObjectMapper(), clazz, entry.value.typeId))
+            .setImplementation(BinaryObjectSerializer(ObjectMapperFactory.cborObjectMapper, clazz, entry.value.typeId))
         configuration.serializationConfig
             .addSerializerConfig(serializerConfig)
     }
@@ -103,7 +96,7 @@ class CacheConfig(
         val joinConfiguration = configuration.networkConfig.join
         joinConfiguration.multicastConfig.isEnabled = false
         joinConfiguration.tcpIpConfig.isEnabled = true
-        joinConfiguration.tcpIpConfig.members = listOf("primary")
+        joinConfiguration.tcpIpConfig.members = listOf("localhost")
     }
 
     private fun applyMapSetting(configuration: Config) {
